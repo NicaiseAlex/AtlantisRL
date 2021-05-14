@@ -8,6 +8,9 @@ import gym
 import cv2
 from sklearn.utils import shuffle
 from tensorflow.python.keras.callbacks import EarlyStopping
+from keras.layers.convolutional import UpSampling2D, Convolution2D
+from keras.layers import Input, Dense, Reshape
+from tensorflow.keras.layers import Dense, Activation, Permute, Conv2D, GlobalAveragePooling2D, MaxPooling2D, Dropout, Flatten
 
 
 #Initialize
@@ -17,11 +20,16 @@ flattenImageSize = heightSizePictures * widthSizePictures
 
 env = gym.make('Atlantis-v0')
 
-
-def modelDense(nbrD1):
+def model():
     model = Sequential()
 
-    model.add(Dense(nbrD1, input_dim=flattenImageSize, activation='sigmoid'))
+    #model.add(Dense(200, input_dim=flattenImageSize, activation='sigmoid'))
+    #model.add(Dense(100, input_dim=200, activation='sigmoid'))
+
+    model.add(Reshape((1, heightSizePictures, widthSizePictures, 1), input_shape=(flattenImageSize,)))
+    model.add(Convolution2D(32, 9, strides=(4, 4), padding='same', activation='relu', kernel_initializer='he_uniform'))
+    model.add(Flatten())
+    model.add(Dense(16, activation='relu', kernel_initializer='he_uniform'))
 
     model.add(Dense(nbClasses, activation='softmax'))
     model.summary()
@@ -33,34 +41,8 @@ def modelDense(nbrD1):
 
     ourCallback = EarlyStopping(monitor='val_accuracy', min_delta = 0.0001, patience = 20, verbose = 0, mode ='auto', baseline = None, restore_best_weights = False)
     model.fit(xTrain, yTrain, epochs=1000, batch_size=128, validation_split=0.2, callbacks=[ourCallback])
+    #model.fit(xTrain, yTrain, epochs=1000, batch_size=128, validation_split=0.2)
 
-    score = model.evaluate(xTest, yTest)
-    print("%s: %.2f%%" % (model.metrics_names[1], score[1] * 100))
-    pred_test = np.argmax(model.predict(xTest), axis=1)
-    print(pred_test.shape, np.argmax(yTest, axis=1).shape)
-    print("F1 score: ", f1_score(pred_test, np.argmax(yTest, axis=1), average=None))
-    print("F1 score micro: ", f1_score(pred_test, np.argmax(yTest, axis=1), average='micro'))
-    print("F1 score macro: ", f1_score(pred_test, np.argmax(yTest, axis=1), average='macro'))
-    print('confusion matrix\n', confusion_matrix(np.argmax(yTest, axis=1), pred_test))
-
-    return model
-
-def modelDense2(nbrD1, nbrD2):
-    model = Sequential()
-
-    model.add(Dense(nbrD1, input_dim=flattenImageSize, activation='sigmoid'))
-    model.add(Dense(nbrD2, input_dim=nbrD1, activation='sigmoid'))
-
-    model.add(Dense(nbClasses, activation='softmax'))
-    model.summary()
-    model.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=['accuracy'])
-    print("xTrain : ", xTrain.shape)
-    print("xTest : ", xTest.shape)
-    print("yTrain : ", yTrain.shape)
-    print("yTest : ", yTest.shape)
-
-    ourCallback = EarlyStopping(monitor='val_accuracy', min_delta = 0.0001, patience = 20, verbose = 0, mode ='auto', baseline = None, restore_best_weights = False)
-    model.fit(xTrain, yTrain, epochs=1000, batch_size=128, validation_split=0.2, callbacks=[ourCallback])
 
     score = model.evaluate(xTest, yTest)
     print("%s: %.2f%%" % (model.metrics_names[1], score[1] * 100))
@@ -75,7 +57,7 @@ def modelDense2(nbrD1, nbrD2):
 
 def play():
 
-    modelToPLay = modelDense2(200, 100)
+    modelToPLay = model()
 
     move = 0
 
